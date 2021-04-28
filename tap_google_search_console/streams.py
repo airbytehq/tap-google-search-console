@@ -22,7 +22,8 @@ STREAMS = {
         'replication_method': 'FULL_TABLE',
         'path': 'sites/{}',
         'data_key': 'site_entry',
-        'api_method': 'GET'
+        'api_method': 'get',
+        'resource_name': 'sites'
     },
 
     'sitemaps': {
@@ -30,7 +31,8 @@ STREAMS = {
         'replication_method': 'FULL_TABLE',
         'path': 'sites/{}/sitemaps',
         'data_key': 'sitemap',
-        'api_method': 'GET'
+        'api_method': 'list',
+        'resource_name': 'sitemaps'
     },
 
     'performance_report_custom': {
@@ -39,14 +41,15 @@ STREAMS = {
         'replication_keys': ['date'],
         'path': 'sites/{}/searchAnalytics/query',
         'data_key': 'rows',
-        'api_method': 'POST',
+        'api_method': 'query',
+        'resource_name': 'searchanalytics',
         'row_limit': 10000,
         'body': {
             'aggregationType': 'auto'
         },
         'bookmark_type': 'datetime',
         'pagination': 'body',
-        'sub_types': ['web', 'image', 'video']
+        'sub_types': ['web', 'image', 'video', 'news']
     },
 
     'performance_report_date': {
@@ -55,7 +58,8 @@ STREAMS = {
         'replication_keys': ['date'],
         'path': 'sites/{}/searchAnalytics/query',
         'data_key': 'rows',
-        'api_method': 'POST',
+        'api_method': 'query',
+        'resource_name': 'searchanalytics',
         'row_limit': 10000,
         'body': {
             'aggregationType': 'byProperty',
@@ -63,7 +67,7 @@ STREAMS = {
         },
         'bookmark_type': 'datetime',
         'pagination': 'body',
-        'sub_types': ['web', 'image', 'video']
+        'sub_types': ['web', 'image', 'video', 'news']
     },
 
     'performance_report_country': {
@@ -72,7 +76,8 @@ STREAMS = {
         'replication_keys': ['date'],
         'path': 'sites/{}/searchAnalytics/query',
         'data_key': 'rows',
-        'api_method': 'POST',
+        'api_method': 'query',
+        'resource_name': 'searchanalytics',
         'row_limit': 10000,
         'body': {
             'aggregationType': 'byProperty',
@@ -80,7 +85,7 @@ STREAMS = {
         },
         'bookmark_type': 'datetime',
         'pagination': 'body',
-        'sub_types': ['web', 'image', 'video']
+        'sub_types': ['web', 'image', 'video', 'news']
     },
 
     'performance_report_device': {
@@ -89,7 +94,8 @@ STREAMS = {
         'replication_keys': ['date'],
         'path': 'sites/{}/searchAnalytics/query',
         'data_key': 'rows',
-        'api_method': 'POST',
+        'api_method': 'query',
+        'resource_name': 'searchanalytics',
         'row_limit': 10000,
         'body': {
             'aggregationType': 'byProperty',
@@ -97,7 +103,7 @@ STREAMS = {
         },
         'bookmark_type': 'datetime',
         'pagination': 'body',
-        'sub_types': ['web', 'image', 'video']
+        'sub_types': ['web', 'image', 'video', 'news']
     },
 
     'performance_report_page': {
@@ -106,7 +112,8 @@ STREAMS = {
         'replication_keys': ['date', 'page'],
         'path': 'sites/{}/searchAnalytics/query',
         'data_key': 'rows',
-        'api_method': 'POST',
+        'api_method': 'query',
+        'resource_name': 'searchanalytics',
         'row_limit': 10000,
         'body': {
             'aggregationType': 'byPage',
@@ -114,7 +121,7 @@ STREAMS = {
         },
         'bookmark_type': 'datetime',
         'pagination': 'body',
-        'sub_types': ['web', 'image', 'video']
+        'sub_types': ['web', 'image', 'video', 'news']
     },
 
     'performance_report_query': {
@@ -123,7 +130,8 @@ STREAMS = {
         'replication_keys': ['date'],
         'path': 'sites/{}/searchAnalytics/query',
         'data_key': 'rows',
-        'api_method': 'POST',
+        'api_method': 'query',
+        'resource_name': 'searchanalytics',
         'row_limit': 10000,
         'body': {
             'aggregationType': 'byProperty',
@@ -131,6 +139,6 @@ STREAMS = {
         },
         'bookmark_type': 'datetime',
         'pagination': 'body',
-        'sub_types': ['web', 'image', 'video']
+        'sub_types': ['web', 'image', 'video', 'news']
     },
 }

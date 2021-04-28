@@ -1,6 +1,7 @@
 from singer.catalog import Catalog, CatalogEntry, Schema
 from tap_google_search_console.schema import get_schemas, STREAMS
 
+
 def discover():
     schemas, field_metadata = get_schemas()
     catalog = Catalog([])
