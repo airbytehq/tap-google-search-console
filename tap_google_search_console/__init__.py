@@ -12,6 +12,7 @@ LOGGER = singer.get_logger()
 REQUIRED_CONFIG_KEYS = [
     'credentials_json',
     'email',
+    'site_urls',
     'start_date',
     'user_agent'
 ]
