@@ -189,8 +189,7 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
         data = client.get(
             method_name=api_method,
             resource_name=resource_name,
-            params=path_params,
-            # params=querystring
+            params=path_params
             )
 
         # time_extracted: datetime when the data was extracted from the API
