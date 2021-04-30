@@ -125,7 +125,8 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
                   bookmark_field=None,
                   data_key=None,
                   body_params=None,
-                  id_fields=None):
+                  id_fields=None,
+                  resource_name=None):
 
     # Get the latest bookmark for the stream and set the last_datetime
     last_datetime = None
@@ -144,6 +145,7 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
     total_records = 0
     batch_count = limit
     page = 1
+    path_params = {'siteUrl': site}
 
     while limit == batch_count:
         if pagination == 'body':
@@ -174,29 +176,21 @@ def sync_endpoint(client, #pylint: disable=too-many-branches
         querystring = None
         if params.items():
             querystring = '&'.join(['%s=%s' % (key, value) for (key, value) in params.items()])
-        LOGGER.info('URL for Stream: {}, Site: {} ({}): {}/{}{}'.format(
+        LOGGER.info('URL for Stream: {}, Site: {}, Search type: {}'.format(
             stream_name,
             site,
-            api_method,
-            BASE_URL,
-            path,
-            '?{}'.format(querystring) if querystring else ''))
+            sub_type))
         if body and not body == {}:
             LOGGER.info('body = {}'.format(body))
 
         # API request data, endpoint = stream_name passed to client for metrics logging
-        data = {}
-        if api_method == 'GET':
-            data = client.get(
-                path=path,
-                params=querystring,
-                endpoint=stream_name)
-        elif api_method == 'POST':
-            data = client.post(
-                path=path,
-                params=querystring,
-                endpoint=stream_name,
-                data=json.dumps(body))
+        if body:
+            path_params['body'] = body
+        data = client.get(
+            method_name=api_method,
+            resource_name=resource_name,
+            params=path_params
+            )
 
         # time_extracted: datetime when the data was extracted from the API
         time_extracted = utils.now()
@@ -346,6 +340,7 @@ def sync(client, config, catalog, state):
                 site_total = 0
                 site_encoded = quote(site, safe='')
                 path = endpoint_config.get('path').format(site_encoded)
+                resource_name = endpoint_config.get('resource_name')
 
                 # Set dimension_list for performance_reports
                 if stream_name == 'performance_report_custom':
@@ -423,7 +418,8 @@ def sync(client, config, catalog, state):
                             bookmark_field=bookmark_field,
                             data_key=endpoint_config.get('data_key', None),
                             body_params=body,
-                            id_fields=endpoint_config.get('key_properties'))
+                            id_fields=endpoint_config.get('key_properties'),
+                            resource_name=resource_name)
 
                         # Increment totals
                         endpoint_total = endpoint_total + total_records

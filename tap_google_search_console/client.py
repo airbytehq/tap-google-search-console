@@ -1,13 +1,16 @@
-from datetime import datetime, timedelta
+import json
+from typing import Dict
+
 import backoff
 import requests
 
 import singer
-from singer import metrics
+from google.oauth2 import service_account
+from googleapiclient.discovery import Resource, build
 from singer import utils
 
-BASE_URL = 'https://www.googleapis.com/webmasters/v3'
-GOOGLE_TOKEN_URI = 'https://oauth2.googleapis.com/token'
+
+SCOPES = ["https://www.googleapis.com/auth/webmasters.readonly", ]
 LOGGER = singer.get_logger()
 
 
@@ -105,6 +108,7 @@ ERROR_CODE_EXCEPTION_MAPPING = {
 def get_exception_for_error_code(error_code):
     return ERROR_CODE_EXCEPTION_MAPPING.get(error_code, GoogleError)
 
+
 def raise_for_error(response):
     try:
         response.raise_for_status()
@@ -127,65 +131,34 @@ def raise_for_error(response):
         except (ValueError, TypeError):
             raise GoogleError(error)
 
-class GoogleClient: # pylint: disable=too-many-instance-attributes
-    def __init__(self,
-                 client_id,
-                 client_secret,
-                 refresh_token,
-                 user_agent=None):
-        self.__client_id = client_id
-        self.__client_secret = client_secret
-        self.__refresh_token = refresh_token
-        self.__user_agent = user_agent
-        self.__access_token = None
-        self.__expires = None
-        self.__session = requests.Session()
-        self.base_url = None
 
+class GoogleClient:
+    def __init__(self, credentials_json: str, email: str):
+        self._creds = None
+        self._credentials_json = credentials_json
+        self._admin_email = email
+        self._service = None
 
-    def __enter__(self):
-        self.get_access_token()
-        return self
+    def _load_account_info(self) -> Dict:
+        account_info = json.loads(self._credentials_json)
+        return account_info
 
-    def __exit__(self, exception_type, exception_value, traceback):
-        self.__session.close()
+    def _obtain_creds(self) -> service_account.Credentials:
+        account_info = self._load_account_info()
+        creds = service_account.Credentials.from_service_account_info(account_info, scopes=SCOPES)
+        self._creds = creds.with_subject(self._admin_email)
 
-    @backoff.on_exception(backoff.expo,
-                          Server5xxError,
-                          max_tries=5,
-                          factor=2)
-    def get_access_token(self):
-        # The refresh_token never expires and may be used many times to generate each access_token
-        # Since the refresh_token does not expire, it is not included in get access_token response
-        if self.__access_token is not None and self.__expires > datetime.utcnow():
-            return
+    def _construct_resource(self) -> Resource:
+        if not self._creds:
+            self._obtain_creds()
+        self._service = build("searchconsole", "v1", credentials=self._creds)
 
-        headers = {}
-        if self.__user_agent:
-            headers['User-Agent'] = self.__user_agent
+    def _get_resource(self, name: str):
+        if not self._service:
+            self._construct_resource()
+        return getattr(self._service, name)
 
-        response = self.__session.post(
-            url=GOOGLE_TOKEN_URI,
-            headers=headers,
-            data={
-                'grant_type': 'refresh_token',
-                'client_id': self.__client_id,
-                'client_secret': self.__client_secret,
-                'refresh_token': self.__refresh_token,
-            })
-
-        if response.status_code >= 500:
-            raise Server5xxError()
-
-        if response.status_code != 200:
-            raise_for_error(response)
-
-        data = response.json()
-        self.__access_token = data['access_token']
-        self.__expires = datetime.utcnow() + timedelta(seconds=data['expires_in'])
-        LOGGER.info('Authorized, token expires = {}'.format(self.__expires))
-
-    @backoff.on_exception(backoff.constant, 
+    @backoff.on_exception(backoff.constant,
                           GoogleForbiddenError,
                           max_tries=2,  # Only retry once
                           interval=900,  # Backoff for 15 minutes in case of Quota Exceeded error
@@ -197,52 +170,8 @@ class GoogleClient: # pylint: disable=too-many-instance-attributes
     # Rate Limit:
     #  https://developers.google.com/webmaster-tools/search-console-api-original/v3/limits
     @utils.ratelimit(1200, 60)
-    def request(self, method, path=None, url=None, **kwargs):
-
-        self.get_access_token()
-
-        if not url and self.base_url is None:
-            self.base_url = BASE_URL
-
-        if not url and path:
-            url = '{}/{}'.format(self.base_url, path)
-
-        # endpoint = stream_name (from sync.py API call)
-        if 'endpoint' in kwargs:
-            endpoint = kwargs['endpoint']
-            del kwargs['endpoint']
-        else:
-            endpoint = None
-
-        if 'headers' not in kwargs:
-            kwargs['headers'] = {}
-        kwargs['headers']['Authorization'] = 'Bearer {}'.format(self.__access_token)
-
-        if self.__user_agent:
-            kwargs['headers']['User-Agent'] = self.__user_agent
-
-        if method == 'POST':
-            kwargs['headers']['Content-Type'] = 'application/json'
-
-        with metrics.http_request_timer(endpoint) as timer:
-            response = self.__session.request(method, url, **kwargs)
-            timer.tags[metrics.Tag.http_status_code] = response.status_code
-
-        if response.status_code >= 500:
-            raise Server5xxError()
-
-        #Use retry functionality in backoff to wait and retry if
-        #response code equals 429 because rate limit has been exceeded
-        if response.status_code == 429:
-            raise Server429Error()
-
-        if response.status_code != 200:
-            raise_for_error(response)
-
-        return response.json()
-
-    def get(self, path, **kwargs):
-        return self.request('GET', path=path, **kwargs)
-
-    def post(self, path, **kwargs):
-        return self.request('POST', path=path, **kwargs)
+    def get(self, method_name, resource_name, params):
+        resource = self._get_resource(resource_name)
+        method = getattr(resource(), method_name)
+        response = method(**params).execute()
+        return response
