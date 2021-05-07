@@ -52,24 +52,6 @@ STREAMS = {
         'sub_types': ['web', 'image', 'video', 'news']
     },
 
-    'performance_report_date': {
-        'key_properties': ['site_url', 'search_type', 'date'],
-        'replication_method': 'INCREMENTAL',
-        'replication_keys': ['date'],
-        'path': 'sites/{}/searchAnalytics/query',
-        'data_key': 'rows',
-        'api_method': 'query',
-        'resource_name': 'searchanalytics',
-        'row_limit': 10000,
-        'body': {
-            'aggregationType': 'byProperty',
-            'dimensions': ['date']
-        },
-        'bookmark_type': 'datetime',
-        'pagination': 'body',
-        'sub_types': ['web', 'image', 'video', 'news']
-    },
-
     'performance_report_country': {
         'key_properties': ['site_url', 'search_type', 'date', 'country'],
         'replication_method': 'INCREMENTAL',
